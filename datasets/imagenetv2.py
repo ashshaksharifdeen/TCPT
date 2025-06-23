@@ -13,7 +13,7 @@ class ImageNetV2(DatasetBase):
     This dataset is used for testing only.
     """
 
-    dataset_dir = "imagenetv2"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/imagenetv2"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

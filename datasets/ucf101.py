@@ -11,7 +11,7 @@ from .oxford_pets import OxfordPets
 @DATASET_REGISTRY.register()
 class UCF101(DatasetBase):
 
-    dataset_dir = "ucf101"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/ucf101"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

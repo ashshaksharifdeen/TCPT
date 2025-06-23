@@ -10,7 +10,7 @@ from .oxford_pets import OxfordPets
 @DATASET_REGISTRY.register()
 class FGVCAircraft(DatasetBase):
 
-    dataset_dir = "fgvc_aircraft"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/fgvc_aircraft"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

@@ -24,7 +24,7 @@ NEW_CNAMES = {
 @DATASET_REGISTRY.register()
 class EuroSAT(DatasetBase):
 
-    dataset_dir = "eurosat"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/eurosat"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

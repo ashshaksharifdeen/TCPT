@@ -15,7 +15,7 @@ class ImageNetA(DatasetBase):
     This dataset is used for testing only.
     """
 
-    dataset_dir = "imagenet-adversarial"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/imagenet-adversarial"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

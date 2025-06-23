@@ -11,7 +11,7 @@ from .oxford_pets import OxfordPets
 @DATASET_REGISTRY.register()
 class ImageNet(DatasetBase):
 
-    dataset_dir = "imagenet"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/imagenet"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

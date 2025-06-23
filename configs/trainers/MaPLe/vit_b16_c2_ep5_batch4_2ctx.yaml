@@ -31,6 +31,6 @@ MODEL:
 TRAINER:
   MAPLE:
     N_CTX: 2
-    CTX_INIT: "a photo of a"
+    CTX_INIT: "‘a photo of a"
     PREC: "fp16"
     PROMPT_DEPTH: 9

@@ -10,7 +10,7 @@ from .oxford_pets import OxfordPets
 @DATASET_REGISTRY.register()
 class SUN397(DatasetBase):
 
-    dataset_dir = "sun397"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/sun397"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

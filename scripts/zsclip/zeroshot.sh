@@ -3,10 +3,10 @@
 #cd ../..
 
 # custom config
-DATA=/path/to/datasets
+DATA=/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset
 TRAINER=ZeroshotCLIP
-DATASET=$1
-CFG=$2  # rn50, rn101, vit_b32 or vit_b16
+DATASET=caltech101
+CFG=vit_b16 # rn50, rn101, vit_b32 or vit_b16
 
 python train.py \
 --root ${DATA} \

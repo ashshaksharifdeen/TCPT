@@ -1,0 +1,252 @@
+========== ALL RESULTS (2025-05-23_10-49-38) ==========
+
+Parsing results for dataset: caltech101
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/caltech101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/caltech101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 97.74%. macro_f1: 95.35%. ece: 5.68%. mce: 1.88%. adaptive_ece: 5.68%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/caltech101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 97.74% ± 0.00%
+* macro_f1: 95.35% ± 0.00%
+* ece: 5.68% ± 0.00%
+* mce: 1.88% ± 0.00%
+* adaptive_ece: 5.68% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/caltech101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/caltech101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 92.90%. macro_f1: 93.18%. ece: 2.71%. mce: 0.84%. adaptive_ece: 1.92%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/caltech101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 92.90% ± 0.00%
+* macro_f1: 93.18% ± 0.00%
+* ece: 2.71% ± 0.00%
+* mce: 0.84% ± 0.00%
+* adaptive_ece: 1.92% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: food101
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/food101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/food101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 90.80%. macro_f1: 90.79%. ece: 3.74%. mce: 1.11%. adaptive_ece: 3.71%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/food101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 90.80% ± 0.00%
+* macro_f1: 90.79% ± 0.00%
+* ece: 3.74% ± 0.00%
+* mce: 1.11% ± 0.00%
+* adaptive_ece: 3.71% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/food101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/food101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 91.67%. macro_f1: 91.60%. ece: 4.05%. mce: 1.11%. adaptive_ece: 4.05%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/food101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 91.67% ± 0.00%
+* macro_f1: 91.60% ± 0.00%
+* ece: 4.05% ± 0.00%
+* mce: 1.11% ± 0.00%
+* adaptive_ece: 4.05% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: dtd
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/dtd/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/dtd/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 70.25%. macro_f1: 67.82%. ece: 20.23%. mce: 3.69%. adaptive_ece: 20.23%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/dtd/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 70.25% ± 0.00%
+* macro_f1: 67.82% ± 0.00%
+* ece: 20.23% ± 0.00%
+* mce: 3.69% ± 0.00%
+* adaptive_ece: 20.23% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/dtd/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/dtd/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 48.91%. macro_f1: 46.14%. ece: 10.63%. mce: 2.73%. adaptive_ece: 10.46%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/dtd/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 48.91% ± 0.00%
+* macro_f1: 46.14% ± 0.00%
+* ece: 10.63% ± 0.00%
+* mce: 2.73% ± 0.00%
+* adaptive_ece: 10.46% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: ucf101
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/ucf101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/ucf101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 82.21%. macro_f1: 81.06%. ece: 7.61%. mce: 1.45%. adaptive_ece: 7.61%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/ucf101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 82.21% ± 0.00%
+* macro_f1: 81.06% ± 0.00%
+* ece: 7.61% ± 0.00%
+* mce: 1.45% ± 0.00%
+* adaptive_ece: 7.61% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/ucf101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/ucf101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 79.61%. macro_f1: 77.80%. ece: 8.68%. mce: 1.76%. adaptive_ece: 8.67%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/ucf101/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 79.61% ± 0.00%
+* macro_f1: 77.80% ± 0.00%
+* ece: 8.68% ± 0.00%
+* mce: 1.76% ± 0.00%
+* adaptive_ece: 8.67% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: oxford_flowers
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/oxford_flowers/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/oxford_flowers/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 95.82%. macro_f1: 95.64%. ece: 12.01%. mce: 3.15%. adaptive_ece: 11.97%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/oxford_flowers/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 95.82% ± 0.00%
+* macro_f1: 95.64% ± 0.00%
+* ece: 12.01% ± 0.00%
+* mce: 3.15% ± 0.00%
+* adaptive_ece: 11.97% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/oxford_flowers/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/oxford_flowers/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 72.20%. macro_f1: 65.49%. ece: 4.75%. mce: 1.32%. adaptive_ece: 4.83%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/oxford_flowers/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 72.20% ± 0.00%
+* macro_f1: 65.49% ± 0.00%
+* ece: 4.75% ± 0.00%
+* mce: 1.32% ± 0.00%
+* adaptive_ece: 4.83% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: oxford_pets
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/oxford_pets/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/oxford_pets/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 94.47%. macro_f1: 94.44%. ece: 6.29%. mce: 1.85%. adaptive_ece: 6.29%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/oxford_pets/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 94.47% ± 0.00%
+* macro_f1: 94.44% ± 0.00%
+* ece: 6.29% ± 0.00%
+* mce: 1.85% ± 0.00%
+* adaptive_ece: 6.29% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/oxford_pets/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/oxford_pets/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 96.20%. macro_f1: 96.22%. ece: 7.60%. mce: 1.72%. adaptive_ece: 7.60%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/oxford_pets/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 96.20% ± 0.00%
+* macro_f1: 96.22% ± 0.00%
+* ece: 7.60% ± 0.00%
+* mce: 1.72% ± 0.00%
+* adaptive_ece: 7.60% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: fgvc_aircraft
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/fgvc_aircraft/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/fgvc_aircraft/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 35.35%. macro_f1: 32.51%. ece: 8.72%. mce: 2.27%. adaptive_ece: 8.72%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/fgvc_aircraft/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 35.35% ± 0.00%
+* macro_f1: 32.51% ± 0.00%
+* ece: 8.72% ± 0.00%
+* mce: 2.27% ± 0.00%
+* adaptive_ece: 8.72% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/fgvc_aircraft/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/fgvc_aircraft/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 36.65%. macro_f1: 33.29%. ece: 2.19%. mce: 1.07%. adaptive_ece: 3.47%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/fgvc_aircraft/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 36.65% ± 0.00%
+* macro_f1: 33.29% ± 0.00%
+* ece: 2.19% ± 0.00%
+* mce: 1.07% ± 0.00%
+* adaptive_ece: 3.47% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: stanford_cars
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/stanford_cars/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/stanford_cars/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 70.81%. macro_f1: 69.76%. ece: 11.34%. mce: 2.30%. adaptive_ece: 11.17%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/stanford_cars/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 70.81% ± 0.00%
+* macro_f1: 69.76% ± 0.00%
+* ece: 11.34% ± 0.00%
+* mce: 2.30% ± 0.00%
+* adaptive_ece: 11.17% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/stanford_cars/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/stanford_cars/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 74.89%. macro_f1: 73.72%. ece: 6.50%. mce: 1.40%. adaptive_ece: 6.41%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/stanford_cars/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 74.89% ± 0.00%
+* macro_f1: 73.72% ± 0.00%
+* ece: 6.50% ± 0.00%
+* mce: 1.40% ± 0.00%
+* adaptive_ece: 6.41% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: sun397
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/sun397/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/sun397/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 80.65%. macro_f1: 80.31%. ece: 6.81%. mce: 1.24%. adaptive_ece: 6.81%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/sun397/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 80.65% ± 0.00%
+* macro_f1: 80.31% ± 0.00%
+* ece: 6.81% ± 0.00%
+* mce: 1.24% ± 0.00%
+* adaptive_ece: 6.81% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/sun397/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/sun397/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 78.69%. macro_f1: 77.77%. ece: 4.74%. mce: 0.91%. adaptive_ece: 4.74%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/sun397/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 78.69% ± 0.00%
+* macro_f1: 77.77% ± 0.00%
+* ece: 4.74% ± 0.00%
+* mce: 0.91% ± 0.00%
+* adaptive_ece: 4.74% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: eurosat
+--- Base classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/train_base/eurosat/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/train_base/eurosat/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 23.71%. macro_f1: 14.25%. ece: 0.62%. mce: 0.61%. adaptive_ece: 3.10%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/train_base/eurosat/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 23.71% ± 0.00%
+* macro_f1: 14.25% ± 0.00%
+* ece: 0.62% ± 0.00%
+* mce: 0.61% ± 0.00%
+* adaptive_ece: 3.10% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in /storagepool/Ashshak/output2/base2new/test_new/eurosat/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+/storagepool/Ashshak/output2/base2new/test_new/eurosat/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 16.74%. macro_f1: 8.12%. ece: 7.11%. mce: 7.11%. adaptive_ece: 16.73%. 
+===
+Summary of directory: /storagepool/Ashshak/output2/base2new/test_new/eurosat/shots_16/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 16.74% ± 0.00%
+* macro_f1: 8.12% ± 0.00%
+* ece: 7.11% ± 0.00%
+* mce: 7.11% ± 0.00%
+* adaptive_ece: 16.73% ± 0.00%
+===
+-----------------------------
+

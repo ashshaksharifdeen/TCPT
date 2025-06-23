@@ -19,7 +19,7 @@ NEW_CNAMES = {
 @DATASET_REGISTRY.register()
 class Caltech101(DatasetBase):
 
-    dataset_dir = "caltech-101"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/caltech-101"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

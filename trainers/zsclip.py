@@ -48,7 +48,19 @@ class ZeroshotCLIP(TrainerX):
         with torch.no_grad():
             text_features = clip_model.encode_text(prompts)
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        
+        """# Upcast to float32
+        f32 = text_features.float()
 
+        # Compute the thin SVD in float32
+        U, S, Vh = torch.linalg.svd(f32, full_matrices=False)
+
+        # Form the orthonormalized features
+        F_orth = U @ Vh   # still float32
+
+        #  Downcast back to float16
+        text_features = F_orth.half()"""
+        
         self.text_features = text_features
         self.clip_model = clip_model
 

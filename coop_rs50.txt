@@ -1,0 +1,77 @@
+========== ALL RESULTS (2025-05-16_08-12-00) ==========
+
+Parsing results for dataset: dtd
+--- Base classes ---
+Parsing files in output/base2new/train_base/dtd/shots_16/CoOp/rn50_ep50
+output/base2new/train_base/dtd/shots_16/CoOp/rn50_ep50/seed1/log.txt  accuracy: 75.23%. macro_f1: 74.61%. ece: 2.66%. mce: 1.08%. adaptive_ece: 2.98%. 
+===
+Summary of directory: output/base2new/train_base/dtd/shots_16/CoOp/rn50_ep50
+* accuracy: 75.23% ± 0.00%
+* macro_f1: 74.61% ± 0.00%
+* ece: 2.66% ± 0.00%
+* mce: 1.08% ± 0.00%
+* adaptive_ece: 2.98% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in output/base2new/test_new/dtd/shots_16/CoOp/rn50_ep50
+output/base2new/test_new/dtd/shots_16/CoOp/rn50_ep50/seed1/log.txt  accuracy: 42.87%. macro_f1: 40.90%. ece: 7.55%. mce: 2.39%. adaptive_ece: 7.55%. 
+===
+Summary of directory: output/base2new/test_new/dtd/shots_16/CoOp/rn50_ep50
+* accuracy: 42.87% ± 0.00%
+* macro_f1: 40.90% ± 0.00%
+* ece: 7.55% ± 0.00%
+* mce: 2.39% ± 0.00%
+* adaptive_ece: 7.55% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: food101
+--- Base classes ---
+Parsing files in output/base2new/train_base/food101/shots_16/CoOp/rn50_ep50
+output/base2new/train_base/food101/shots_16/CoOp/rn50_ep50/seed1/log.txt  accuracy: 82.61%. macro_f1: 82.56%. ece: 1.17%. mce: 0.35%. adaptive_ece: 0.99%. 
+===
+Summary of directory: output/base2new/train_base/food101/shots_16/CoOp/rn50_ep50
+* accuracy: 82.61% ± 0.00%
+* macro_f1: 82.56% ± 0.00%
+* ece: 1.17% ± 0.00%
+* mce: 0.35% ± 0.00%
+* adaptive_ece: 0.99% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in output/base2new/test_new/food101/shots_16/CoOp/rn50_ep50
+output/base2new/test_new/food101/shots_16/CoOp/rn50_ep50/seed1/log.txt  accuracy: 80.80%. macro_f1: 79.65%. ece: 1.20%. mce: 0.33%. adaptive_ece: 1.33%. 
+===
+Summary of directory: output/base2new/test_new/food101/shots_16/CoOp/rn50_ep50
+* accuracy: 80.80% ± 0.00%
+* macro_f1: 79.65% ± 0.00%
+* ece: 1.20% ± 0.00%
+* mce: 0.33% ± 0.00%
+* adaptive_ece: 1.33% ± 0.00%
+===
+-----------------------------
+
+Parsing results for dataset: eurosat
+--- Base classes ---
+Parsing files in output/base2new/train_base/eurosat/shots_16/CoOp/rn50_ep50
+output/base2new/train_base/eurosat/shots_16/CoOp/rn50_ep50/seed1/log.txt  accuracy: 88.10%. macro_f1: 87.82%. ece: 6.30%. mce: 1.47%. adaptive_ece: 6.24%. 
+===
+Summary of directory: output/base2new/train_base/eurosat/shots_16/CoOp/rn50_ep50
+* accuracy: 88.10% ± 0.00%
+* macro_f1: 87.82% ± 0.00%
+* ece: 6.30% ± 0.00%
+* mce: 1.47% ± 0.00%
+* adaptive_ece: 6.24% ± 0.00%
+===
+--- Novel classes ---
+Parsing files in output/base2new/test_new/eurosat/shots_16/CoOp/rn50_ep50
+output/base2new/test_new/eurosat/shots_16/CoOp/rn50_ep50/seed1/log.txt  accuracy: 41.67%. macro_f1: 37.71%. ece: 21.67%. mce: 9.11%. adaptive_ece: 21.67%. 
+===
+Summary of directory: output/base2new/test_new/eurosat/shots_16/CoOp/rn50_ep50
+* accuracy: 41.67% ± 0.00%
+* macro_f1: 37.71% ± 0.00%
+* ece: 21.67% ± 0.00%
+* mce: 9.11% ± 0.00%
+* adaptive_ece: 21.67% ± 0.00%
+===
+-----------------------------
+

@@ -3,7 +3,7 @@
 #cd ../..
 
 # custom config
-DATA="/path/to/dataset/folder"
+DATA="/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset"
 TRAINER=MaPLe
 
 DATASET=$1

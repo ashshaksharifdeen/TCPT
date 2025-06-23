@@ -11,7 +11,7 @@ from .dtd import DescribableTextures as DTD
 @DATASET_REGISTRY.register()
 class Food101(DatasetBase):
 
-    dataset_dir = "food-101"
+    dataset_dir = "/storagepool/Ashshak/Vlm-calibration/C-TPT/dataset/food101"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(cfg.DATASET.ROOT))

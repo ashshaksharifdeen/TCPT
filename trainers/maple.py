@@ -5,6 +5,7 @@ import copy
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import torch.distributions as dists
 from torch.cuda.amp import GradScaler, autocast
 
 from dassl.engine import TRAINER_REGISTRY, TrainerX
@@ -12,10 +13,52 @@ from dassl.metrics import compute_accuracy
 from dassl.utils import load_pretrained_weights, load_checkpoint
 from dassl.optim import build_optimizer, build_lr_scheduler
 
-from clip import clip
-from clip.simple_tokenizer import SimpleTokenizer as _Tokenizer
 
+
+from clip import clip
+from clip.model import convert_weights
+from clip.simple_tokenizer import SimpleTokenizer as _Tokenizer
+from trainers.regularizers import REGULARIZER_REGISTRY
 _tokenizer = _Tokenizer()
+
+
+CUSTOM_TEMPLATES = {
+    "OxfordPets": "a photo of a {}, a type of pet.",
+    "OxfordFlowers": "a photo of a {}, a type of flower.",
+    "FGVCAircraft": "a photo of a {}, a type of aircraft.",
+    "DescribableTextures": "{} texture.",
+    "EuroSAT": "a centered satellite photo of {}.",
+    "StanfordCars": "a photo of a {}.",
+    "Food101": "a photo of {}, a type of food.",
+    "SUN397": "a photo of a {}.",
+    "Caltech101": "a photo of a {}.",
+    "UCF101": "a photo of a person doing {}.",
+    "ImageNet": "a photo of a {}.",
+    "ImageNetSketch": "a photo of a {}.",
+    "ImageNetV2": "a photo of a {}.",
+    "ImageNetA": "a photo of a {}.",
+    "ImageNetR": "a photo of a {}.",
+}
+
+def load_clip_to_cpu_zs(cfg):
+    backbone_name = cfg.MODEL.BACKBONE.NAME
+    url = clip._MODELS[backbone_name]
+    model_path = clip._download(url)
+
+    try:
+        # loading JIT archive
+        model = torch.jit.load(model_path, map_location="cpu").eval()
+        state_dict = None
+
+    except RuntimeError:
+        state_dict = torch.load(model_path, map_location="cpu")
+    design_details = {"trainer": 'CoOp',
+                      "vision_depth": 0,
+                      "language_depth": 0, "vision_ctx": 0,
+                      "language_ctx": 0}
+    model = clip.build_model(state_dict or model.state_dict(), design_details)
+
+    return model
 
 
 def load_clip_to_cpu(cfg):
@@ -39,30 +82,69 @@ def load_clip_to_cpu(cfg):
 
     return model
 
+class ZeroshotCLIP():
+    def build_model(self):
+        cfg = self.cfg
+        classnames = self.dm.dataset.classnames
+
+        print(f"Loading CLIP (backbone: {cfg.MODEL.BACKBONE.NAME})")
+        clip_model = load_clip_to_cpu_zs(cfg)
+        clip_model.to(self.device)
+
+        temp = CUSTOM_TEMPLATES[cfg.DATASET.NAME]
+        prompts = [temp.format(c.replace("_", " ")) for c in classnames]
+        print(f"Prompts: {prompts}")
+        prompts = torch.cat([clip.tokenize(p) for p in prompts])
+        prompts = prompts.to(self.device)
+
+        with torch.no_grad():
+            text_features = clip_model.encode_text(prompts)
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+        self.text_features = text_features
+        self.clip_model = clip_model
+
+    def model_inference(self, image):
+        image_features = self.clip_model.encode_image(image)
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        logit_scale = self.clip_model.logit_scale.exp()
+        logits = logit_scale * image_features @ self.text_features.t()
+        return logits
 
 class TextEncoder(nn.Module):
     def __init__(self, clip_model):
         super().__init__()
         self.transformer = clip_model.transformer
-        self.positional_embedding = clip_model.positional_embedding
+        
+        self.positional_embedding = clip_model.positional_embedding #shape of positional_embedding: torch.Size([77, 512])
+        
         self.ln_final = clip_model.ln_final
-        self.text_projection = clip_model.text_projection
+       
+        self.text_projection = clip_model.text_projection #shape of text_projection: torch.Size([512, 512])
+        
         self.dtype = clip_model.dtype
-
+    
     def forward(self, prompts, tokenized_prompts, compound_prompts_deeper_text):
-        x = prompts + self.positional_embedding.type(self.dtype)
-        x = x.permute(1, 0, 2)  # NLD -> LND
+        x = prompts + self.positional_embedding.type(self.dtype) #shape of prompts + positional embedding: torch.Size([24, 77, 512])
+        
+        x = x.permute(1, 0, 2)  # NLD -> LND #shape after permute: torch.Size([77, 24, 512])
+        
         # Pass as the list, as nn.sequential cannot process multiple arguments in the forward pass
+        
         combined = [x, compound_prompts_deeper_text, 0]  # third argument is the counter which denotes depth of prompt
+        
         outputs = self.transformer(combined)
-        x = outputs[0]  # extract the x back from here
-        x = x.permute(1, 0, 2)  # LND -> NLD
-        x = self.ln_final(x).type(self.dtype)
-
+       
+        x = outputs[0]  # extract the x back from here #shape of x ( outputs[0]): torch.Size([77, 24, 512])
+        
+        x = x.permute(1, 0, 2)  # LND -> NLD #shape of x ( x.permute(1, 0, 2)): torch.Size([24, 77, 512])
+        
+        x = self.ln_final(x).type(self.dtype) # torch.Size([24, 77, 512])
+        
         # x.shape = [batch_size, n_ctx, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), tokenized_prompts.argmax(dim=-1)] @ self.text_projection
-
+        x = x[torch.arange(x.shape[0]), tokenized_prompts.argmax(dim=-1)] @ self.text_projection #shape of x at eot embedding: torch.Size([24, 512])
+        
         return x
 
 
@@ -74,8 +156,11 @@ class MultiModalPromptLearner(nn.Module):
         ctx_init = cfg.TRAINER.MAPLE.CTX_INIT
         dtype = clip_model.dtype
         ctx_dim = clip_model.ln_final.weight.shape[0]
+        #print("clip model ln_final.weight:",clip_model.ln_final.weight.shape) #clip model ln_final.weight: torch.Size([512])
+        #print("clip model ctx_dim:",clip_model.ln_final.weight.shape[0]) #clip model ctx_dim: 512
         clip_imsize = clip_model.visual.input_resolution
         cfg_imsize = cfg.INPUT.SIZE[0]
+        #self.clip_model = clip_model
         # Default is 1, which is compound shallow prompting
         assert cfg.TRAINER.MAPLE.PROMPT_DEPTH >= 1, "For MaPLe, PROMPT_DEPTH should be >= 1"
         self.compound_prompts_depth = cfg.TRAINER.MAPLE.PROMPT_DEPTH  # max=12, but will create 11 such shared prompts
@@ -87,8 +172,10 @@ class MultiModalPromptLearner(nn.Module):
             n_ctx = n_ctx
             prompt = clip.tokenize(ctx_init)
             with torch.no_grad():
-                embedding = clip_model.token_embedding(prompt).type(dtype)
-            ctx_vectors = embedding[0, 1: 1 + n_ctx, :]
+                embedding = clip_model.token_embedding(prompt).type(dtype) #prompt embedding dimension: torch.Size([1, 77, 512])
+                
+            ctx_vectors = embedding[0, 1: 1 + n_ctx, :] #ctx_vectors dimension: torch.Size([2, 512])
+            
             prompt_prefix = ctx_init
         else:
             # random initialization
@@ -102,33 +189,42 @@ class MultiModalPromptLearner(nn.Module):
         # Linear layer so that the tokens will project to 512 and will be initialized from 768
         self.proj = nn.Linear(ctx_dim, 768)
         self.proj.half()
+        #learnable shallow text prompts parameter
         self.ctx = nn.Parameter(ctx_vectors)
         # These below parameters related to the shared prompts
         # Define the compound prompts for the deeper layers
 
         # Minimum can be 1, which defaults to shallow MaPLe
         # compound prompts
+        # deep prompts injected into internal layers (which internal layer ?) of the text transformer.
         self.compound_prompts_text = nn.ParameterList([nn.Parameter(torch.empty(n_ctx, 512))
-                                                      for _ in range(self.compound_prompts_depth - 1)])
+                                                      for _ in range(self.compound_prompts_depth - 1)]) ## 2,512 is learnable matrix with the depth of 8
+
+        
         for single_para in self.compound_prompts_text:
             nn.init.normal_(single_para, std=0.02)
         # Also make corresponding projection layers, for each prompt
         single_layer = nn.Linear(ctx_dim, 768)
-        self.compound_prompt_projections = _get_clones(single_layer, self.compound_prompts_depth - 1)
+        #Projects each text prompt into vision prompt space.
+        self.compound_prompt_projections = _get_clones(single_layer, self.compound_prompts_depth - 1) #512,768 is learnable matrix with the depth of 8
 
+        
         classnames = [name.replace("_", " ") for name in classnames]
         name_lens = [len(_tokenizer.encode(name)) for name in classnames]
         prompts = [prompt_prefix + " " + name + "." for name in classnames]
 
-        tokenized_prompts = torch.cat([clip.tokenize(p) for p in prompts])  # (n_cls, n_tkn)
+        tokenized_prompts = torch.cat([clip.tokenize(p) for p in prompts])  # (n_cls, n_tkn) #complete tokenized prompt shape: torch.Size([24, 77])
+        
         with torch.no_grad():
-            embedding = clip_model.token_embedding(tokenized_prompts).type(dtype)
-
+            embedding = clip_model.token_embedding(tokenized_prompts).type(dtype) #complete prompt embedding shape: torch.Size([24, 77, 512])
+             
         # These token vectors will be saved when in save_model(),
         # but they should be ignored in load_model() as we want to use
         # those computed using the current class names
-        self.register_buffer("token_prefix", embedding[:, :1, :])  # SOS
-        self.register_buffer("token_suffix", embedding[:, 1 + n_ctx:, :])  # CLS, EOS
+        self.register_buffer("token_prefix", embedding[:, :1, :])  # SOS token prefix shape: torch.Size([24, 1, 512]
+        
+        self.register_buffer("token_suffix", embedding[:, 1 + n_ctx:, :])  # CLS, EOS token suffix shape: torch.Size([24, 74, 512]) other ([24, 2, 512]) will be learnable vector and it can be incoperate in prompt depth 
+        
 
         self.n_cls = n_cls
         self.n_ctx = n_ctx
@@ -169,6 +265,7 @@ class MultiModalPromptLearner(nn.Module):
         # Before returning, need to transform
         # prompts to 768 for the visual side
         visual_deep_prompts = []
+        #Text deep prompts are transformed by F_k to produce vision deep prompts.
         for index, layer in enumerate(self.compound_prompt_projections):
             visual_deep_prompts.append(layer(self.compound_prompts_text[index]))
         # Now the other way around
@@ -193,15 +290,56 @@ class CustomCLIP(nn.Module):
         prompts, shared_ctx, deep_compound_prompts_text, deep_compound_prompts_vision = self.prompt_learner()
         text_features = self.text_encoder(prompts, tokenized_prompts, deep_compound_prompts_text)
         image_features = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
-
+        """
+        image_features shape: torch.Size([4, 512])
+        text_features shape: torch.Size([51, 512])
+        logits shape: torch.Size([4, 51])
+        labels shape: torch.Size([4])
+        """
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         text_features = text_features / text_features.norm(dim=-1, keepdim=True)
         logits = logit_scale * image_features @ text_features.t()
+        self.sematic_val = image_features @ text_features.t()
+        self.imfeatures = image_features
+        self.textfeatures = text_features
+        self.output_ = torch.softmax(logits, dim=1)
+        #temperaturescaling
+        #logits= logits/1.16
+        
+        self.logits_val = logits
+
 
         if self.prompt_learner.training:
-            return F.cross_entropy(logits, label)
+                #Apply temperature scalliong  >>> temperature_value = {'ViT': 1.16, 'RN': 1.15} learned temperature value
+                """mask = (
+                torch.arange(logits.size(1), device=logits.device)
+                .unsqueeze(0)
+                .expand(logits.size(0), -1)
+                != label.unsqueeze(1)
+                )
+                # divide only those positions by T
+                logits = torch.where(mask, logits / 1.16, logits)"""
+            
+                return F.cross_entropy(logits, label)
 
         return logits
+    
+    def forward_features(self, image):
+        """
+        Returns the intermediate, unpooled features from the vision encoder.
+        This method calls forward_features on the image encoder (if available) to obtain a 
+        tensor of shape [batch, tokens, hidden_dim] that contains spatial information.
+        """
+        tokenized_prompts = self.tokenized_prompts
+        _, shared_ctx, _, deep_compound_prompts_vision = self.prompt_learner()
+        # Assume the image encoder has a method forward_features.
+        if hasattr(self.image_encoder, "forward_features"):
+            features = self.image_encoder.forward_features(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
+        else:
+            # Fallback: use the standard forward and then unsqueeze to mimic spatial dims.
+            features = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
+            features = features.unsqueeze(1)  # [B, hidden_dim] -> [B, hidden_dim, 1]
+        return features
 
 
 def _get_clones(module, N):
@@ -229,7 +367,7 @@ class MaPLe(TrainerX):
 
         print("Turning off gradients in both the image and the text encoder")
         name_to_update = "prompt_learner"
-
+        
         for name, param in self.model.named_parameters():
             if name_to_update not in name:
                 # Make sure that VPT prompts are updated
@@ -256,13 +394,28 @@ class MaPLe(TrainerX):
 
         self.scaler = GradScaler() if cfg.TRAINER.MAPLE.PREC == "amp" else None
 
+        # --- zero-shot CLIP hook ---
+        self.zeroshot = ZeroshotCLIP()
+        self.zeroshot.cfg = cfg
+        self.zeroshot.dm = self.dm
+        self.zeroshot.device = self.device
+        self.zeroshot.build_model()
+        
+        
         # Note that multi-gpu training could be slow because CLIP's size is
         # big, which slows down the copy operation in DataParallel
-        device_count = torch.cuda.device_count()
-        if device_count > 1:
-            print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
-            self.model = nn.DataParallel(self.model)
 
+        device_count = torch.cuda.device_count()
+        """if device_count > 1:
+            print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
+            self.model = nn.DataParallel(self.model)"""
+
+    def get_diff(self, inputs):
+        max_values = inputs.max(dim=1)
+        max_values = max_values.values.unsqueeze(dim=1).repeat(1, inputs.shape[1])
+        diff = max_values - inputs
+        return diff
+    
     def forward_backward(self, batch):
         image, label = self.parse_batch_train(batch)
 
@@ -271,20 +424,357 @@ class MaPLe(TrainerX):
         scaler = self.scaler
 
         prec = self.cfg.TRAINER.MAPLE.PREC
+
+        #below you can intergrate loss or regularization function
         if prec == "amp":
             with autocast():
                 loss = model(image, label)
+                 
+
             optim.zero_grad()
             scaler.scale(loss).backward()
             scaler.step(optim)
             scaler.update()
+            
         else:
+
+            
+
+
             loss = model(image, label)
+            
+            #CAP loss
+            image_features = model.imfeatures
+            text_features = model.textfeatures
+            C = text_features.shape[0]
+            # Compute cosine similarity (angle-based)
+            cos_sim_matrix = image_features @ text_features.T  # shape: (4, 51)
+
+            # Create one-hot labels
+            labels_expanded = label.unsqueeze(1)  # shape: (4, 1)
+            one_hot = torch.zeros_like(cos_sim_matrix).scatter_(1, labels_expanded, 1)
+
+            # Positive similarities (cos(theta_i, y_i))
+            positive_sim = (cos_sim_matrix * one_hot).sum(dim=1)  # shape: (4,)
+
+            # Negative similarities (average over j != y_i)
+            negative_sim = (cos_sim_matrix * (1 - one_hot)).sum(dim=1) / (C - 1)
+
+            # Final CAP loss
+            cap_loss = (negative_sim - positive_sim).mean()
+            #---------------------------------------------------
+
+
+            #cross model zs alignment-----------
+            # grab MaPLe features
+            mp_img = model.imfeatures      # [B, D]
+            mp_txt = model.textfeatures    # [C, D]
+            mp_log = model.logits_val      # [B, C]
+
+            with torch.no_grad():
+                zs_log = self.zeroshot.model_inference(image)  # [B, C]
+                zs_img = self.zeroshot.clip_model.encode_image(image)
+                #zs_img = zs_img / zs_img.norm(dim=-1, keepdim=True)  # [B, D]
+                zs_txt = self.zeroshot.text_features               # [C, D]
+
+
+            #normal distribution implementation
+           
+            """mean = torch.tensor([0.0], device=zs_txt.device)
+            std  = torch.tensor([1.0], device=zs_txt.device)
+            random_dist = dists.Normal(loc=mean, scale=std)"""
+    
+            z_ref = torch.randn_like(zs_txt,device=zs_txt.device)                         #random_dist.sample(mp_txt.shape).to(zs_txt.device)                                            #torch.randn_like(zs_txt,device=zs_txt.device)
+            z_ref = z_ref.squeeze(-1) 
+            rafa= F.l1_loss(mp_txt,z_ref) 
+            zs_cosine = zs_img @ zs_txt.T
+            # Create one-hot labels
+            labels_expanded_zs = label.unsqueeze(1)  # shape: (4, 1)
+            one_hot_zs = torch.zeros_like(zs_cosine).scatter_(1, labels_expanded_zs, 1)
+
+            # Positive similarities (cos(theta_i, y_i))
+            positive_sim_zs = (zs_cosine * one_hot_zs).sum(dim=1)  # shape: (4,)
+
+            # Negative similarities (average over j != y_i)
+            negative_sim_zs = (zs_cosine * (1 - one_hot_zs)).sum(dim=1) / (C - 1)
+
+            l1_img    = F.l1_loss(mp_img, zs_img)
+            l1_text   = F.l1_loss(mp_txt, zs_txt)
+            l2_text = F.mse_loss(mp_txt, zs_txt,reduction='mean')
+            l1_logits = F.l1_loss(mp_log, zs_log)
+            l1_possitive = F.l1_loss(positive_sim,positive_sim_zs)
+            l1_negative = F.l1_loss(negative_sim,negative_sim_zs)    
+
+            #orthogonality alignment of text features to maintain uniformity
+            Z = zs_txt.shape[0]
+            # Compute cosine similarity matrix between all pairs of features
+            # shape: (N, N) where entry (i,j) is similarity between features i and j
+            zs_cos_sim_matrix = torch.matmul(zs_txt, zs_txt.T)
+            # Create boolean mask for diagonal elements (self-similarities)
+            zs_mask = torch.eye(Z, device=zs_cos_sim_matrix.device).bool()
+            # Zero out diagonal elements to ignore self-similarities 
+            zs_cos_sim_matrix_no_self = zs_cos_sim_matrix.masked_fill(zs_mask, 0)
+            # For each feature, compute mean similarity with all other features
+            # Divide by (N-1) to exclude self-similarity from mean
+            zs_neighbor_sims_mean = zs_cos_sim_matrix_no_self.sum(dim=1) / (Z - 1)
+            # Average across all features to get final loss
+            zs_cosine_loss = zs_neighbor_sims_mean.mean()    
+
+
+            #end---------------------------
+
+
+            ##Inter class equvarience loss -begin------------------------------------------------
+            """logits = model.logits_val
+            Ba, Z = logits.shape
+            true_scores = logits[torch.arange(Ba), label]                           # [B]
+            # mask out the true-class positions so we can take the runner-up
+            logits_for_margin = logits.clone()
+            logits_for_margin[torch.arange(Ba), label] = -float("inf")
+            runner_up_scores = logits_for_margin.max(dim=1).values                  # [B]
+            margins = true_scores - runner_up_scores                               # [B]
+
+            # 2) Equivariance regularizer: batch‐variance of margins
+            margin_var = margins.var(unbiased=False) 
+
+
+            #Inter class equvarience loss -end----------------------------------
+
+
+
+
+            #------------------------------------------------------------------------
+            #CAP loss softmax type------------------
+            # Example: obtain image and text features
+            image_features = model.imfeatures      # shape: (batch_size, feature_dim)
+            text_features = model.textfeatures       # shape: (num_classes, feature_dim)
+            C = text_features.shape[0]  # total number of classes
+
+            # (Optional) L2-normalize features so that dot products equal cosine similarities.
+            #image_features = torch.nn.functional.normalize(image_features, dim=1)
+            #text_features = torch.nn.functional.normalize(text_features, dim=1)
+
+            # Compute the cosine similarity matrix between image and text features.
+            # This results in a (batch_size, num_classes) matrix.
+            cos_sim_matrix = image_features @ text_features.T
+
+            tau=model.logit_scale.exp()
+
+            # Scale the similarities by the temperature tau to control the softness of the distribution.
+            logits = cos_sim_matrix / tau
+
+            # Manual softmax computation:
+            # 1. Exponentiate the logits.
+            exp_logits = torch.exp(logits)
+
+            # 2. Compute the sum of exponentials for each sample.
+            sum_exp_logits = torch.sum(exp_logits, dim=1, keepdim=True)
+
+            # 3. Obtain the softmax probabilities.
+            softmax_probs = exp_logits / sum_exp_logits
+
+            # Now, extract the probabilities corresponding to the correct (ground-truth) class.
+            batch_size = logits.shape[0]
+            # Create indices for each sample in the batch.
+            indices = torch.arange(batch_size)
+            # Extract the probability for the ground-truth class from each row.
+            correct_class_probs = softmax_probs[indices, label]
+
+            # Compute the negative log-likelihood loss for each sample.
+            cap_loss = -torch.log(correct_class_probs)
+
+            # Average the loss over the batch.
+            softmax_contrastive_loss = cap_loss.mean()
+
+
+
+            #END --------------------------
+            #pairwise distance
+            N = model.textfeatures.shape[0]
+
+            # Compute the pairwise Euclidean distances using torch.cdist
+            # shape of pairwise_dist is [N, N], where pairwise_dist[i, j] = ||t_i - t_j||_2
+            pairwise_dist = torch.cdist(text_features.float(),text_features.float(), p=2)
+
+            # Since the diagonal is zero (distance of each sample to itself), summing
+            # over all i,j includes the diagonal but that won't affect the result.
+            total_dist = pairwise_dist.sum()
+
+            # Apply the coefficient 2 / (N*(N-1))
+            # The factor of 2 appears because the sum_{i != j} counts each pair only once,
+            # but cdist effectively calculates both (i,j) and (j,i).
+            mean_dist = (2.0 * total_dist) / (N * (N - 1))
+            #------------------------END Pair wise distanse--------------------------
+
+            #-----------------------------penalty------------------------------------
+            # Number of feature vectors (rows in `features`)
+            
+
+            # 1) Compute pairwise Euclidean distances of shape [N, N]
+            pairwise_dist = torch.cdist(text_features.float(), text_features.float(), p=2)
+
+            # 2) Square the distances to get ||t_i - t_j||^2
+            squared_dist = pairwise_dist ** 2
+
+            # 3) Apply the exponential term: exp(-||t_i - t_j||^2 / 2)
+            penalty_matrix = torch.exp(-0.5 * squared_dist)
+
+            # 4) Exclude the diagonal (where i == j) from the sum without inplace operation
+            mask = torch.eye(penalty_matrix.size(0), dtype=torch.bool, device=penalty_matrix.device)
+            penalty_matrix = penalty_matrix.masked_fill(mask, 0)
+
+            # 5) Sum all off-diagonal terms
+            sum_penalty = penalty_matrix.sum()
+
+            # 6) Multiply by the normalization factor 2 / [N*(N-1)]
+            penalty_value = (2.0 / (N * (N - 1))) * sum_penalty
+
+            #MDCA loss
+            output = model.output_ 
+            batch, classes = output.shape
+            mdca_loss_ = torch.tensor(0.0).cuda()
+            for c in range(classes):
+                avg_count = (label == c).float().mean()
+                avg_conf = torch.mean(output[:,c])
+                mdca_loss_ += torch.abs(avg_conf - avg_count)
+            denom = classes
+            mdca_loss_ /= denom    
+            #finish mdca loss -------------------------------------
+
+            #label smoothing loss -----------------------------
+            alpha=0.1
+            margin = 10.0
+            pred = output.log_softmax(dim=-1)
+            num_classes = pred.shape[-1]
+            confidence = 1.0 - alpha
+            true_dist = torch.zeros_like(pred)
+            true_dist.fill_(alpha / (num_classes - 1))
+            true_dist.scatter_(1, label.data.unsqueeze(1), confidence)
+            label_smooth_loss = torch.mean(torch.sum(-true_dist * pred, dim=-1))
+            
+            # get logit distance
+            inputs= model.logits_val
+            diff = self.get_diff(inputs)
+            # add linear penalty where logit distances are larger than the margin
+            loss_margin = F.relu(diff-margin).mean()
+            #loss += (+ (softmax_contrastive_loss))
+            #finish label smoothing loss -----------------------------"""
+            logits = model.logits_val  #model.sematic_val  # shape (B, C)
+            labels = label               # shape (B,)
+            # fetch our helper from the registry
+            margin_var_fn = REGULARIZER_REGISTRY.get('inter_class_margin_variance')
+            #margin_var   = margin_var_fn(logits, labels)
+            # fetch and apply our new regularizer
+            reg_fn = REGULARIZER_REGISTRY.get('margin_mean_var')
+            # pick alpha, beta from your config or hard‐code for now
+
+            alpha = self.cfg.TRAINER.MAPLE.MARGIN_ALPHA
+            beta  = self.cfg.TRAINER.MAPLE.MARGIN_BETA
+            margin_reg = reg_fn(logits, label, alpha=0.1, beta=0.01)  #model.sematic_val/logits
+
+            #westerian-------------------
+            w2_fn = REGULARIZER_REGISTRY.get("gaussian_w2")
+            w2_reg = w2_fn(logits, labels)    
+
+
+            #end-------------------
+
+            #nce-----
+            nce_fn = REGULARIZER_REGISTRY.get("text_nce_align")
+
+
+            loss_nce_txt = nce_fn(
+                    text_features        = model.textfeatures,      # (C, D)
+                    frozen_text_features = zs_txt,                  # (C, D)
+                    labels               = label,                   # (B,)
+                    logit_scale          = model.logit_scale        # scalar Tensor
+            )
+
+            # fetch the L1‐based NCE reg
+            nce_l1_fn = REGULARIZER_REGISTRY.get("text_nce_align_l1")
+
+            # compute it
+            loss_nce_l1 = nce_l1_fn(
+                        text_features        = model.textfeatures,    # (C, D)
+                        frozen_text_features = zs_txt,                # (C, D)
+                        labels               = label,                 # (B,)
+                        logit_scale          = model.logit_scale      # scalar tensor
+            )
+
+            # --- fetch the new reg ---
+            pairwise_nce_fn = REGULARIZER_REGISTRY.get("pairwise_nce")
+            loss_pair_txt = pairwise_nce_fn(
+            tuned       = model.textfeatures,
+            frozen      = zs_txt,
+            logit_scale = model.logit_scale,
+            )
+
+            cov_fn = REGULARIZER_REGISTRY.get("text_covariance_match")
+            loss_cov_txt = cov_fn(model.textfeatures, zs_txt)
+
+            # fetch the regularizer
+            mm_fn = REGULARIZER_REGISTRY.get("text_moment_matching")
+
+            # compute it
+            loss_mm_txt = mm_fn(model.textfeatures, zs_txt)
+
+            reg_fn_band = REGULARIZER_REGISTRY.get("margin_band")
+            delta = 1.0
+            eps   = 0.2
+            beta  = 0.01
+
+            margin_reg_band = reg_fn_band(
+                model.logits_val, 
+                label,
+                delta=delta,
+                eps=eps,
+                beta=beta
+                )
+            
+            rafa_plus_repulsion = REGULARIZER_REGISTRY.get("rafa_plus_class_repulsion")
+            rafa_los_re=rafa_plus_repulsion(
+            z_img      = mp_img,
+            text_feats      = mp_txt,
+            labels     = labels,)
+
+
+
+            #end-----
+            #eccv_penalty
+            eccv_penalty = REGULARIZER_REGISTRY.get("eccv_penalty")
+            eccv_penalty_loss = eccv_penalty(zs_pred=zs_log, output=logits)
+            #eccv_zeroshot
+            eccv_zs = REGULARIZER_REGISTRY.get("eccv_zs")
+            eccv_zs_loss = eccv_zs(zs_pred=zs_log, output=logits,label=label)
+
+            #orthogonal--------------------
+            features   = model.textfeatures 
+            N = features.shape[0]
+            # Compute cosine similarity matrix between all pairs of features
+            # shape: (N, N) where entry (i,j) is similarity between features i and j
+            cos_sim_matrix = torch.matmul(features, features.T)
+            # Create boolean mask for diagonal elements (self-similarities)
+            mask = torch.eye(N, device=cos_sim_matrix.device).bool()
+            # Zero out diagonal elements to ignore self-similarities 
+            cos_sim_matrix_no_self = cos_sim_matrix.masked_fill(mask, 0)
+            # For each feature, compute mean similarity with all other features
+            # Divide by (N-1) to exclude self-similarity from mean
+            neighbor_sims_mean = cos_sim_matrix_no_self.sum(dim=1) / (N - 1)
+            # Average across all features to get final loss
+            cosine_loss = neighbor_sims_mean.mean() 
+            orth_align = F.l1_loss(zs_cosine_loss,cosine_loss)
+            loss+= eccv_penalty_loss #(margin_reg+ 5.0*loss_mm_txt)      #(margin_reg +(5.0*l1_text)) #+ (5.0*rafa) /#(5.0*loss_mm_txt)+(loss_nce_txt)<<tune and play around with thease
+
+            #loss+=(+(margin_reg)+(2.0 * negative_sim.mean())-(5.0* positive_sim.mean())) #+(negative_sim.mean())
+            #loss+=(-(mean_dist)-(penalty_value))
+         
             optim.zero_grad()
             loss.backward()
+            #loss.backward()
             optim.step()
-
+            
         loss_summary = {"loss": loss.item()}
+        #loss_summary = {"loss": loss.item()}
 
         if (self.batch_idx + 1) == self.num_batches:
             self.update_lr()

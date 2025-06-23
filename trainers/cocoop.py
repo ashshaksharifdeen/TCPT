@@ -13,10 +13,48 @@ from dassl.utils import load_pretrained_weights, load_checkpoint
 from dassl.optim import build_optimizer, build_lr_scheduler
 
 from clip import clip
+from trainers.regularizers import REGULARIZER_REGISTRY
 from clip.simple_tokenizer import SimpleTokenizer as _Tokenizer
-
+from clip.model import convert_weights
 _tokenizer = _Tokenizer()
 
+CUSTOM_TEMPLATES = {
+    "OxfordPets": "a photo of a {}, a type of pet.",
+    "OxfordFlowers": "a photo of a {}, a type of flower.",
+    "FGVCAircraft": "a photo of a {}, a type of aircraft.",
+    "DescribableTextures": "{} texture.",
+    "EuroSAT": "a centered satellite photo of {}.",
+    "StanfordCars": "a photo of a {}.",
+    "Food101": "a photo of {}, a type of food.",
+    "SUN397": "a photo of a {}.",
+    "Caltech101": "a photo of a {}.",
+    "UCF101": "a photo of a person doing {}.",
+    "ImageNet": "a photo of a {}.",
+    "ImageNetSketch": "a photo of a {}.",
+    "ImageNetV2": "a photo of a {}.",
+    "ImageNetA": "a photo of a {}.",
+    "ImageNetR": "a photo of a {}.",
+}
+
+def load_clip_to_cpu_zs(cfg):
+    backbone_name = cfg.MODEL.BACKBONE.NAME
+    url = clip._MODELS[backbone_name]
+    model_path = clip._download(url)
+
+    try:
+        # loading JIT archive
+        model = torch.jit.load(model_path, map_location="cpu").eval()
+        state_dict = None
+
+    except RuntimeError:
+        state_dict = torch.load(model_path, map_location="cpu")
+    design_details = {"trainer": 'CoOp',
+                      "vision_depth": 0,
+                      "language_depth": 0, "vision_ctx": 0,
+                      "language_ctx": 0}
+    model = clip.build_model(state_dict or model.state_dict(), design_details)
+
+    return model
 
 def load_clip_to_cpu(cfg):
     backbone_name = cfg.MODEL.BACKBONE.NAME
@@ -37,6 +75,35 @@ def load_clip_to_cpu(cfg):
     model = clip.build_model(state_dict or model.state_dict(), design_details)
 
     return model
+
+class ZeroshotCLIP():
+    def build_model(self):
+        cfg = self.cfg
+        classnames = self.dm.dataset.classnames
+
+        print(f"Loading CLIP (backbone: {cfg.MODEL.BACKBONE.NAME})")
+        clip_model = load_clip_to_cpu_zs(cfg)
+        clip_model.to(self.device)
+
+        temp = CUSTOM_TEMPLATES[cfg.DATASET.NAME]
+        prompts = [temp.format(c.replace("_", " ")) for c in classnames]
+        print(f"Prompts: {prompts}")
+        prompts = torch.cat([clip.tokenize(p) for p in prompts])
+        prompts = prompts.to(self.device)
+
+        with torch.no_grad():
+            text_features = clip_model.encode_text(prompts)
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+        self.text_features = text_features
+        self.clip_model = clip_model
+
+    def model_inference(self, image):
+        image_features = self.clip_model.encode_image(image)
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        logit_scale = self.clip_model.logit_scale.exp()
+        logits = logit_scale * image_features @ self.text_features.t()
+        return logits
 
 
 class TextEncoder(nn.Module):
@@ -190,6 +257,16 @@ class CustomCLIP(nn.Module):
             l_i = logit_scale * imf_i @ text_features.t()
             logits.append(l_i)
         logits = torch.stack(logits)
+        #print("shape of logits:",logits.shape)
+        self.sematic_val = image_features @ text_features.t()
+        self.imfeatures = image_features
+        self.textfeatures = text_features
+        #print("shape of textfeatures:",text_features.shape)
+        self.output_ = torch.softmax(logits, dim=1)
+        #temperaturescaling
+        #logits= logits/1.08
+        
+        self.logits_val = logits
 
         if self.prompt_learner.training:
             return F.cross_entropy(logits, label)
@@ -241,6 +318,13 @@ class CoCoOp(TrainerX):
 
         self.scaler = GradScaler() if cfg.TRAINER.COCOOP.PREC == "amp" else None
 
+        # --- zero-shot CLIP hook ---
+        self.zeroshot = ZeroshotCLIP()
+        self.zeroshot.cfg = cfg
+        self.zeroshot.dm = self.dm
+        self.zeroshot.device = self.device
+        self.zeroshot.build_model()
+
         # Note that multi-gpu training could be slow because CLIP's size is
         # big, which slows down the copy operation in DataParallel
         device_count = torch.cuda.device_count()
@@ -265,11 +349,114 @@ class CoCoOp(TrainerX):
             scaler.update()
         else:
             loss = model(image, label)
+
+            #cross model zs alignment-----------
+            # grab MaPLe features
+            mp_img = model.imfeatures      # [B, D]
+            mp_txt = model.textfeatures    # [C, D]
+            mp_log = model.logits_val      # [B, C]
+
+            with torch.no_grad():
+                zs_log = self.zeroshot.model_inference(image)  # [B, C]
+                zs_img = self.zeroshot.clip_model.encode_image(image)
+                #zs_img = zs_img / zs_img.norm(dim=-1, keepdim=True)  # [B, D]
+                zs_txt = self.zeroshot.text_features               # [C, D]
+
+
+            logits = model.logits_val  #model.sematic_val  # shape (B, C)
+            labels = label               # shape (B,)
+            # fetch our helper from the registry
+            margin_var_fn = REGULARIZER_REGISTRY.get('inter_class_margin_variance')
+            #margin_var   = margin_var_fn(logits, labels)
+            # fetch and apply our new regularizer
+            reg_fn = REGULARIZER_REGISTRY.get('margin_mean_var')
+            # pick alpha, beta from your config or hard‐code for now
+
+            alpha = self.cfg.TRAINER.MAPLE.MARGIN_ALPHA
+            beta  = self.cfg.TRAINER.MAPLE.MARGIN_BETA
+            margin_reg = reg_fn(logits, label, alpha=0.1, beta=0.01)  #model.sematic_val/logits
+
+            #westerian-------------------
+            w2_fn = REGULARIZER_REGISTRY.get("gaussian_w2")
+            w2_reg = w2_fn(logits, labels)    
+
+
+            #end-------------------
+
+            #nce-----
+            nce_fn = REGULARIZER_REGISTRY.get("text_nce_align")
+
+
+            loss_nce_txt = nce_fn(
+                    text_features        = model.textfeatures,      # (C, D)
+                    frozen_text_features = zs_txt,                  # (C, D)
+                    labels               = label,                   # (B,)
+                    logit_scale          = model.logit_scale        # scalar Tensor
+            )
+
+            # fetch the L1‐based NCE reg
+            nce_l1_fn = REGULARIZER_REGISTRY.get("text_nce_align_l1")
+
+            # compute it
+            loss_nce_l1 = nce_l1_fn(
+                        text_features        = model.textfeatures,    # (C, D)
+                        frozen_text_features = zs_txt,                # (C, D)
+                        labels               = label,                 # (B,)
+                        logit_scale          = model.logit_scale      # scalar tensor
+            )
+
+            # --- fetch the new reg ---
+            pairwise_nce_fn = REGULARIZER_REGISTRY.get("pairwise_nce")
+            loss_pair_txt = pairwise_nce_fn(
+            tuned       = model.textfeatures,
+            frozen      = zs_txt,
+            logit_scale = model.logit_scale,
+            )
+
+            cov_fn = REGULARIZER_REGISTRY.get("text_covariance_match")
+            loss_cov_txt = cov_fn(model.textfeatures, zs_txt)
+
+            # fetch the regularizer
+            mm_fn = REGULARIZER_REGISTRY.get("text_moment_matching")
+
+            # compute it
+            loss_mm_txt = mm_fn(model.textfeatures, zs_txt)
+
+            reg_fn_band = REGULARIZER_REGISTRY.get("margin_band")
+            delta = 1.0
+            eps   = 0.2
+            beta  = 0.01
+
+            margin_reg_band = reg_fn_band(
+                model.logits_val, 
+                label,
+                delta=delta,
+                eps=eps,
+                beta=beta
+                )
+            
+            rafa_plus_repulsion = REGULARIZER_REGISTRY.get("rafa_plus_class_repulsion")
+            rafa_los_re=rafa_plus_repulsion(
+            z_img      = mp_img,
+            text_feats      = mp_txt,
+            labels     = labels,)
+
+            #eccv_penalty
+            eccv_penalty = REGULARIZER_REGISTRY.get("eccv_penalty")
+            eccv_penalty_loss = eccv_penalty(zs_pred=zs_log, output=logits)
+            #eccv_zeroshot
+            eccv_zs = REGULARIZER_REGISTRY.get("eccv_zs")
+            eccv_zs_loss = eccv_zs(zs_pred=zs_log, output=logits,label=label)
+
+
+            #end-----
+            #loss+= eccv_penalty_loss         #(margin_reg +(5.0* loss_mm_txt))
+
             optim.zero_grad()
-            loss.backward()
+            eccv_zs_loss.backward()
             optim.step()
 
-        loss_summary = {"loss": loss.item()}
+        loss_summary = {"loss": eccv_zs_loss.item()}
 
         if (self.batch_idx + 1) == self.num_batches:
             self.update_lr()

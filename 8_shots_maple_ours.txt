@@ -1,0 +1,89 @@
+========== ALL RESULTS (2025-05-14_19-44-41) ==========
+
+Parsing results for dataset: dtd
+--- Base classes ---
+Parsing files in output/base2new/train_base/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+output/base2new/train_base/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 73.73%. macro_f1: 72.40%. ece: 5.62%. mce: 1.85%. adaptive_ece: 5.63%. 
+output/base2new/train_base/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed2/log.txt  accuracy: 75.35%. macro_f1: 74.84%. ece: 2.81%. mce: 0.71%. adaptive_ece: 3.39%. 
+output/base2new/train_base/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed3/log.txt  accuracy: 74.07%. macro_f1: 72.99%. ece: 4.13%. mce: 1.29%. adaptive_ece: 4.17%. 
+===
+Summary of directory: output/base2new/train_base/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 74.38% ± 0.70%
+* macro_f1: 73.41% ± 1.04%
+* ece: 4.19% ± 1.15%
+* mce: 1.28% ± 0.47%
+* adaptive_ece: 4.40% ± 0.93%
+===
+--- Novel classes ---
+Parsing files in output/base2new/test_new/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+output/base2new/test_new/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 58.09%. macro_f1: 56.07%. ece: 12.40%. mce: 2.72%. adaptive_ece: 13.25%. 
+output/base2new/test_new/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed2/log.txt  accuracy: 62.32%. macro_f1: 60.94%. ece: 5.76%. mce: 1.50%. adaptive_ece: 7.00%. 
+output/base2new/test_new/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed3/log.txt  accuracy: 65.46%. macro_f1: 64.72%. ece: 2.20%. mce: 0.54%. adaptive_ece: 1.91%. 
+===
+Summary of directory: output/base2new/test_new/dtd/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 61.96% ± 3.02%
+* macro_f1: 60.58% ± 3.54%
+* ece: 6.79% ± 4.23%
+* mce: 1.59% ± 0.89%
+* adaptive_ece: 7.39% ± 4.64%
+===
+-----------------------------
+
+Parsing results for dataset: food101
+--- Base classes ---
+Parsing files in output/base2new/train_base/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+output/base2new/train_base/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 90.52%. macro_f1: 90.51%. ece: 0.79%. mce: 0.37%. adaptive_ece: 0.47%. 
+output/base2new/train_base/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed2/log.txt  accuracy: 90.25%. macro_f1: 90.24%. ece: 0.92%. mce: 0.31%. adaptive_ece: 0.91%. 
+output/base2new/train_base/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed3/log.txt  accuracy: 90.26%. macro_f1: 90.25%. ece: 0.76%. mce: 0.27%. adaptive_ece: 0.52%. 
+===
+Summary of directory: output/base2new/train_base/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 90.34% ± 0.12%
+* macro_f1: 90.33% ± 0.12%
+* ece: 0.82% ± 0.07%
+* mce: 0.32% ± 0.04%
+* adaptive_ece: 0.63% ± 0.20%
+===
+--- Novel classes ---
+Parsing files in output/base2new/test_new/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+output/base2new/test_new/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 91.96%. macro_f1: 91.93%. ece: 1.14%. mce: 0.50%. adaptive_ece: 1.15%. 
+output/base2new/test_new/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed2/log.txt  accuracy: 91.81%. macro_f1: 91.79%. ece: 1.72%. mce: 0.64%. adaptive_ece: 1.56%. 
+output/base2new/test_new/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed3/log.txt  accuracy: 91.79%. macro_f1: 91.75%. ece: 1.17%. mce: 0.43%. adaptive_ece: 0.98%. 
+===
+Summary of directory: output/base2new/test_new/food101/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 91.85% ± 0.08%
+* macro_f1: 91.82% ± 0.08%
+* ece: 0.92% ± 0.27%
+* mce: 0.25% ± 0.09%
+* adaptive_ece: 0.92% ± 0.24%
+===
+-----------------------------
+
+Parsing results for dataset: eurosat
+--- Base classes ---
+Parsing files in output/base2new/train_base/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+output/base2new/train_base/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 87.83%. macro_f1: 87.68%. ece: 5.43%. mce: 1.50%. adaptive_ece: 5.52%. 
+output/base2new/train_base/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed2/log.txt  accuracy: 91.26%. macro_f1: 91.19%. ece: 8.74%. mce: 2.05%. adaptive_ece: 8.74%. 
+output/base2new/train_base/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed3/log.txt  accuracy: 89.31%. macro_f1: 89.28%. ece: 6.93%. mce: 1.96%. adaptive_ece: 6.88%. 
+===
+Summary of directory: output/base2new/train_base/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 89.47% ± 1.40%
+* macro_f1: 89.38% ± 1.43%
+* ece: 5.94% ± 1.35%
+* mce: 1.04% ± 0.24%
+* adaptive_ece: 6.05% ± 1.32%
+===
+--- Novel classes ---
+Parsing files in output/base2new/test_new/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+output/base2new/test_new/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed1/log.txt  accuracy: 67.82%. macro_f1: 65.95%. ece: 4.76%. mce: 1.91%. adaptive_ece: 4.65%. 
+output/base2new/test_new/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed2/log.txt  accuracy: 69.62%. macro_f1: 67.35%. ece: 4.78%. mce: 1.75%. adaptive_ece: 5.25%. 
+output/base2new/test_new/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx/seed3/log.txt  accuracy: 67.13%. macro_f1: 65.77%. ece: 2.95%. mce: 1.77%. adaptive_ece: 2.68%. 
+===
+Summary of directory: output/base2new/test_new/eurosat/shots_8/MaPLe/vit_b16_c2_ep5_batch4_2ctx
+* accuracy: 68.19% ± 1.05%
+* macro_f1: 66.36% ± 0.71%
+* ece: 4.16% ± 0.86%
+* mce: 1.81% ± 0.07%
+* adaptive_ece: 4.19% ± 1.10%
+===
+-----------------------------
+

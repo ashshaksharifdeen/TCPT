@@ -29,6 +29,9 @@ import trainers.zsclip
 import trainers.maple
 import trainers.independentVL
 import trainers.vpt
+import trainers.promptsrc
+import trainers.kgcoop
+import trainers.prograd
 
 def print_args(args, cfg):
     print("***************")
@@ -92,7 +95,7 @@ def extend_cfg(cfg):
     cfg.TRAINER.COOP = CN()
     cfg.TRAINER.COOP.N_CTX = 16  # number of context vectors
     cfg.TRAINER.COOP.CSC = False  # class-specific context
-    cfg.TRAINER.COOP.CTX_INIT = ""  # initialization words
+    cfg.TRAINER.COOP.CTX_INIT = False #""  # initialization words #set false for Kgcoop
     cfg.TRAINER.COOP.PREC = "fp16"  # fp16, fp32, amp
     cfg.TRAINER.COOP.CLASS_TOKEN_POSITION = "end"  # 'middle' or 'end' or 'front'
 
@@ -104,16 +107,19 @@ def extend_cfg(cfg):
     # Config for MaPLe
     cfg.TRAINER.MAPLE = CN()
     cfg.TRAINER.MAPLE.N_CTX = 2  # number of context vectors
-    cfg.TRAINER.MAPLE.CTX_INIT = "a photo of a"  # initialization words
+    cfg.TRAINER.MAPLE.CTX_INIT = "a photo of the cool"  # initialization words
     cfg.TRAINER.MAPLE.PREC = "fp16"  # fp16, fp32, amp
     cfg.TRAINER.MAPLE.PROMPT_DEPTH = 9 # Max 12, minimum 0, for 1 it will act as shallow MaPLe (J=1)
     cfg.DATASET.SUBSAMPLE_CLASSES = "all"  # all, base or new
+
+    cfg.TRAINER.MAPLE.MARGIN_ALPHA = 0.1   # default
+    cfg.TRAINER.MAPLE.MARGIN_BETA  = 0.01  # default
 
     # Config for independent Vision Language prompting (independent-vlp)
     cfg.TRAINER.IVLP = CN()
     cfg.TRAINER.IVLP.N_CTX_VISION = 2  # number of context vectors at the vision branch
     cfg.TRAINER.IVLP.N_CTX_TEXT = 2  # number of context vectors at the language branch
-    cfg.TRAINER.IVLP.CTX_INIT = "a photo of a"  # initialization words (only for language prompts)
+    cfg.TRAINER.IVLP.CTX_INIT = "an example of"  # initialization words (only for language prompts)
     cfg.TRAINER.IVLP.PREC = "fp16"  # fp16, fp32, amp
     # If both variables below are set to 0, 0, will the config will degenerate to COOP model
     cfg.TRAINER.IVLP.PROMPT_DEPTH_VISION = 9 # Max 12, minimum 0, for 0 it will act as shallow MaPLe (J=1)
@@ -128,6 +134,27 @@ def extend_cfg(cfg):
     cfg.TRAINER.VPT.PROMPT_DEPTH_VISION = 1  # if set to 1, will represent shallow vision prompting only
     cfg.DATASET.SUBSAMPLE_CLASSES = "all"  # all, base or new
 
+    # Config for PromptSRC
+    cfg.TRAINER.PROMPTSRC = CN()
+    cfg.TRAINER.PROMPTSRC.N_CTX_VISION = 4  # number of context vectors at the vision branch
+    cfg.TRAINER.PROMPTSRC.N_CTX_TEXT = 4  # number of context vectors at the language branch
+    cfg.TRAINER.PROMPTSRC.CTX_INIT = "a picture of a"  # initialization words
+    cfg.TRAINER.PROMPTSRC.PREC = "fp16"  # fp16, fp32, amp
+    cfg.TRAINER.PROMPTSRC.PROMPT_DEPTH_VISION = 9  # Max 12, minimum 0, for 0 it will be using shallow IVLP prompting (J=1)
+    cfg.TRAINER.PROMPTSRC.PROMPT_DEPTH_TEXT = 9  # Max 12, minimum 0, for 0 it will be using shallow IVLP prompting (J=1)
+    cfg.TRAINER.PROMPTSRC.TEXT_LOSS_WEIGHT = 25
+    cfg.TRAINER.PROMPTSRC.IMAGE_LOSS_WEIGHT = 10
+    cfg.TRAINER.PROMPTSRC.GPA_MEAN = 15
+    cfg.TRAINER.PROMPTSRC.GPA_STD = 1
+    cfg.DATASET.SUBSAMPLE_CLASSES = "all"  # all, base or new
+
+
+    cfg.LOSS = CN()
+    cfg.LOSS.GM = False
+    cfg.LOSS.NAME = ""
+    cfg.LOSS.ALPHA = 0.
+    cfg.LOSS.T = 1.
+    cfg.LOSS.LAMBDA = 1.
 
 def setup_cfg(args):
     cfg = get_cfg_default()
