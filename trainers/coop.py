@@ -452,7 +452,7 @@ class CoOp(TrainerX):
             #end-----    
 
             loss = F.cross_entropy(output, label)
-            loss+=(margin_reg +(5.0* loss_mm_txt))
+            loss+=margin_reg +5.0* loss_mm_txt
             self.model_backward_and_update(loss)
 
         loss_summary = {
