@@ -465,8 +465,8 @@ class KgCoOp(TrainerX):
             kl_progrdloss = prograd_loss(stu_logits=logits,tea_logits=zs_log,label=label)
 
             #proda-steps loss--------
-            loss = eccv_zs_loss #F.cross_entropy(output, label)
-            loss += 0.1 * loss_m             #margin_reg+ 5.0*loss_mm_txt
+            loss = F.cross_entropy(output, label)
+            loss += 0.1 * loss_m + margin_reg+ 5.0*loss_mm_txt
             #-------------
             #F.cross_entropy(output, label)
             #loss = eccv_zs_loss + kl_progrdloss  #margin_reg+ 5.0*loss_mm_txt
