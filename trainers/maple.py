@@ -524,141 +524,7 @@ class MaPLe(TrainerX):
             #end---------------------------
 
 
-            ##Inter class equvarience loss -begin------------------------------------------------
-            """logits = model.logits_val
-            Ba, Z = logits.shape
-            true_scores = logits[torch.arange(Ba), label]                           # [B]
-            # mask out the true-class positions so we can take the runner-up
-            logits_for_margin = logits.clone()
-            logits_for_margin[torch.arange(Ba), label] = -float("inf")
-            runner_up_scores = logits_for_margin.max(dim=1).values                  # [B]
-            margins = true_scores - runner_up_scores                               # [B]
 
-            # 2) Equivariance regularizer: batch‐variance of margins
-            margin_var = margins.var(unbiased=False) 
-
-
-            #Inter class equvarience loss -end----------------------------------
-
-
-
-
-            #------------------------------------------------------------------------
-            #CAP loss softmax type------------------
-            # Example: obtain image and text features
-            image_features = model.imfeatures      # shape: (batch_size, feature_dim)
-            text_features = model.textfeatures       # shape: (num_classes, feature_dim)
-            C = text_features.shape[0]  # total number of classes
-
-            # (Optional) L2-normalize features so that dot products equal cosine similarities.
-            #image_features = torch.nn.functional.normalize(image_features, dim=1)
-            #text_features = torch.nn.functional.normalize(text_features, dim=1)
-
-            # Compute the cosine similarity matrix between image and text features.
-            # This results in a (batch_size, num_classes) matrix.
-            cos_sim_matrix = image_features @ text_features.T
-
-            tau=model.logit_scale.exp()
-
-            # Scale the similarities by the temperature tau to control the softness of the distribution.
-            logits = cos_sim_matrix / tau
-
-            # Manual softmax computation:
-            # 1. Exponentiate the logits.
-            exp_logits = torch.exp(logits)
-
-            # 2. Compute the sum of exponentials for each sample.
-            sum_exp_logits = torch.sum(exp_logits, dim=1, keepdim=True)
-
-            # 3. Obtain the softmax probabilities.
-            softmax_probs = exp_logits / sum_exp_logits
-
-            # Now, extract the probabilities corresponding to the correct (ground-truth) class.
-            batch_size = logits.shape[0]
-            # Create indices for each sample in the batch.
-            indices = torch.arange(batch_size)
-            # Extract the probability for the ground-truth class from each row.
-            correct_class_probs = softmax_probs[indices, label]
-
-            # Compute the negative log-likelihood loss for each sample.
-            cap_loss = -torch.log(correct_class_probs)
-
-            # Average the loss over the batch.
-            softmax_contrastive_loss = cap_loss.mean()
-
-
-
-            #END --------------------------
-            #pairwise distance
-            N = model.textfeatures.shape[0]
-
-            # Compute the pairwise Euclidean distances using torch.cdist
-            # shape of pairwise_dist is [N, N], where pairwise_dist[i, j] = ||t_i - t_j||_2
-            pairwise_dist = torch.cdist(text_features.float(),text_features.float(), p=2)
-
-            # Since the diagonal is zero (distance of each sample to itself), summing
-            # over all i,j includes the diagonal but that won't affect the result.
-            total_dist = pairwise_dist.sum()
-
-            # Apply the coefficient 2 / (N*(N-1))
-            # The factor of 2 appears because the sum_{i != j} counts each pair only once,
-            # but cdist effectively calculates both (i,j) and (j,i).
-            mean_dist = (2.0 * total_dist) / (N * (N - 1))
-            #------------------------END Pair wise distanse--------------------------
-
-            #-----------------------------penalty------------------------------------
-            # Number of feature vectors (rows in `features`)
-            
-
-            # 1) Compute pairwise Euclidean distances of shape [N, N]
-            pairwise_dist = torch.cdist(text_features.float(), text_features.float(), p=2)
-
-            # 2) Square the distances to get ||t_i - t_j||^2
-            squared_dist = pairwise_dist ** 2
-
-            # 3) Apply the exponential term: exp(-||t_i - t_j||^2 / 2)
-            penalty_matrix = torch.exp(-0.5 * squared_dist)
-
-            # 4) Exclude the diagonal (where i == j) from the sum without inplace operation
-            mask = torch.eye(penalty_matrix.size(0), dtype=torch.bool, device=penalty_matrix.device)
-            penalty_matrix = penalty_matrix.masked_fill(mask, 0)
-
-            # 5) Sum all off-diagonal terms
-            sum_penalty = penalty_matrix.sum()
-
-            # 6) Multiply by the normalization factor 2 / [N*(N-1)]
-            penalty_value = (2.0 / (N * (N - 1))) * sum_penalty
-
-            #MDCA loss
-            output = model.output_ 
-            batch, classes = output.shape
-            mdca_loss_ = torch.tensor(0.0).cuda()
-            for c in range(classes):
-                avg_count = (label == c).float().mean()
-                avg_conf = torch.mean(output[:,c])
-                mdca_loss_ += torch.abs(avg_conf - avg_count)
-            denom = classes
-            mdca_loss_ /= denom    
-            #finish mdca loss -------------------------------------
-
-            #label smoothing loss -----------------------------
-            alpha=0.1
-            margin = 10.0
-            pred = output.log_softmax(dim=-1)
-            num_classes = pred.shape[-1]
-            confidence = 1.0 - alpha
-            true_dist = torch.zeros_like(pred)
-            true_dist.fill_(alpha / (num_classes - 1))
-            true_dist.scatter_(1, label.data.unsqueeze(1), confidence)
-            label_smooth_loss = torch.mean(torch.sum(-true_dist * pred, dim=-1))
-            
-            # get logit distance
-            inputs= model.logits_val
-            diff = self.get_diff(inputs)
-            # add linear penalty where logit distances are larger than the margin
-            loss_margin = F.relu(diff-margin).mean()
-            #loss += (+ (softmax_contrastive_loss))
-            #finish label smoothing loss -----------------------------"""
             logits = model.logits_val  #model.sematic_val  # shape (B, C)
             labels = label               # shape (B,)
             # fetch our helper from the registry
@@ -672,45 +538,7 @@ class MaPLe(TrainerX):
             beta  = self.cfg.TRAINER.MAPLE.MARGIN_BETA
             margin_reg = reg_fn(logits, label, alpha=0.1, beta=0.01)  #model.sematic_val/logits
 
-            #westerian-------------------
-            w2_fn = REGULARIZER_REGISTRY.get("gaussian_w2")
-            w2_reg = w2_fn(logits, labels)    
 
-
-            #end-------------------
-
-            #nce-----
-            nce_fn = REGULARIZER_REGISTRY.get("text_nce_align")
-
-
-            loss_nce_txt = nce_fn(
-                    text_features        = model.textfeatures,      # (C, D)
-                    frozen_text_features = zs_txt,                  # (C, D)
-                    labels               = label,                   # (B,)
-                    logit_scale          = model.logit_scale        # scalar Tensor
-            )
-
-            # fetch the L1‐based NCE reg
-            nce_l1_fn = REGULARIZER_REGISTRY.get("text_nce_align_l1")
-
-            # compute it
-            loss_nce_l1 = nce_l1_fn(
-                        text_features        = model.textfeatures,    # (C, D)
-                        frozen_text_features = zs_txt,                # (C, D)
-                        labels               = label,                 # (B,)
-                        logit_scale          = model.logit_scale      # scalar tensor
-            )
-
-            # --- fetch the new reg ---
-            pairwise_nce_fn = REGULARIZER_REGISTRY.get("pairwise_nce")
-            loss_pair_txt = pairwise_nce_fn(
-            tuned       = model.textfeatures,
-            frozen      = zs_txt,
-            logit_scale = model.logit_scale,
-            )
-
-            cov_fn = REGULARIZER_REGISTRY.get("text_covariance_match")
-            loss_cov_txt = cov_fn(model.textfeatures, zs_txt)
 
             # fetch the regularizer
             mm_fn = REGULARIZER_REGISTRY.get("text_moment_matching")
@@ -718,24 +546,7 @@ class MaPLe(TrainerX):
             # compute it
             loss_mm_txt = mm_fn(model.textfeatures, zs_txt)
 
-            reg_fn_band = REGULARIZER_REGISTRY.get("margin_band")
-            delta = 1.0
-            eps   = 0.2
-            beta  = 0.01
 
-            margin_reg_band = reg_fn_band(
-                model.logits_val, 
-                label,
-                delta=delta,
-                eps=eps,
-                beta=beta
-                )
-            
-            rafa_plus_repulsion = REGULARIZER_REGISTRY.get("rafa_plus_class_repulsion")
-            rafa_los_re=rafa_plus_repulsion(
-            z_img      = mp_img,
-            text_feats      = mp_txt,
-            labels     = labels,)
 
 
 
@@ -747,23 +558,8 @@ class MaPLe(TrainerX):
             eccv_zs = REGULARIZER_REGISTRY.get("eccv_zs")
             eccv_zs_loss = eccv_zs(zs_pred=zs_log, output=logits,label=label)
 
-            #orthogonal--------------------
-            features   = model.textfeatures 
-            N = features.shape[0]
-            # Compute cosine similarity matrix between all pairs of features
-            # shape: (N, N) where entry (i,j) is similarity between features i and j
-            cos_sim_matrix = torch.matmul(features, features.T)
-            # Create boolean mask for diagonal elements (self-similarities)
-            mask = torch.eye(N, device=cos_sim_matrix.device).bool()
-            # Zero out diagonal elements to ignore self-similarities 
-            cos_sim_matrix_no_self = cos_sim_matrix.masked_fill(mask, 0)
-            # For each feature, compute mean similarity with all other features
-            # Divide by (N-1) to exclude self-similarity from mean
-            neighbor_sims_mean = cos_sim_matrix_no_self.sum(dim=1) / (N - 1)
-            # Average across all features to get final loss
-            cosine_loss = neighbor_sims_mean.mean() 
-            orth_align = F.l1_loss(zs_cosine_loss,cosine_loss)
-            loss+= eccv_penalty_loss #(margin_reg+ 5.0*loss_mm_txt)      #(margin_reg +(5.0*l1_text)) #+ (5.0*rafa) /#(5.0*loss_mm_txt)+(loss_nce_txt)<<tune and play around with thease
+
+            loss+=margin_reg + 5.0*loss_mm_txt #(margin_reg+ 5.0*loss_mm_txt)      #(margin_reg +(5.0*l1_text)) #+ (5.0*rafa) /#(5.0*loss_mm_txt)+(loss_nce_txt)<<tune and play around with thease
 
             #loss+=(+(margin_reg)+(2.0 * negative_sim.mean())-(5.0* positive_sim.mean())) #+(negative_sim.mean())
             #loss+=(-(mean_dist)-(penalty_value))
