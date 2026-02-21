@@ -450,13 +450,13 @@ class CoCoOp(TrainerX):
 
 
             #end-----
-            #loss+= eccv_penalty_loss         #(margin_reg +(5.0* loss_mm_txt))
+            loss+= margin_reg + 5.0* loss_mm_txt
 
             optim.zero_grad()
-            eccv_zs_loss.backward()
+            loss.backward()
             optim.step()
 
-        loss_summary = {"loss": eccv_zs_loss.item()}
+        loss_summary = {"loss": loss.item()}
 
         if (self.batch_idx + 1) == self.num_batches:
             self.update_lr()
