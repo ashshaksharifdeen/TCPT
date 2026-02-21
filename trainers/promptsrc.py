@@ -413,7 +413,7 @@ class PromptSRC(TrainerX):
             eccv_zs_loss = eccv_zs(zs_pred=zs_log, output=logits,label=label)
 
             L_SCL = (L_SCL_logits + loss_scl_text + loss_scl_image )
-            loss = (loss_ce + L_SCL + eccv_penalty_loss) #oxford_flowers
+            loss = (loss_ce + L_SCL + margin_reg + 5.0*loss_mm_txt) #oxford_flowers
             optim.zero_grad()
             loss.backward()
             optim.step()
