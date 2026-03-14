@@ -74,6 +74,271 @@ We evaluate on 11 fine-grained classification benchmarks commonly used in prompt
 11. UCF101
 
 ---
+## 🔧 Modify Dassl.pytorch
+Move to Dassl.pytorch>dassl>evaluation>evaluator.py. Replace evaluator.py with the below code:
+```python
+import numpy as np
+import os.path as osp
+from collections import OrderedDict, defaultdict
+
+import torch
+from sklearn.metrics import f1_score, confusion_matrix
+from sklearn.preprocessing import KBinsDiscretizer
+import pandas as pd
+import matplotlib
+matplotlib.use("Agg")           # headless save
+import matplotlib.pyplot as plt
+
+from .build import EVALUATOR_REGISTRY
+
+
+def ECE_Loss(num_bins, predictions, confidences, correct):
+    bin_boundaries = torch.linspace(0, 1, num_bins + 1)
+    bin_lowers, bin_uppers = bin_boundaries[:-1], bin_boundaries[1:]
+    bin_accuracy   = [0.0] * num_bins
+    bin_confidence = [0.0] * num_bins
+    bin_count      = [0]   * num_bins
+
+    # assign each sample to its confidence bin
+    for i, conf in enumerate(confidences):
+        for j, (low, up) in enumerate(zip(bin_lowers, bin_uppers)):
+            if low.item() < conf <= up.item():
+                bin_count[j]      += 1
+                bin_accuracy[j]   += correct[i]
+                bin_confidence[j] += conf
+                break
+
+    # average out per-bin accuracy and confidence
+    for j in range(num_bins):
+        if bin_count[j] > 0:
+            bin_accuracy[j]   /= bin_count[j]
+            bin_confidence[j] /= bin_count[j]
+
+    # weighted absolute differences
+    total = len(predictions)
+    ece = 0.0
+    for j in range(num_bins):
+        ece += abs(bin_accuracy[j] - bin_confidence[j]) * (bin_count[j] / total)
+
+    return ece
+
+
+def MCE(conf, pred, gt, conf_bin_num=10):
+    """
+    Maximal Calibration Error
+    """
+    df = pd.DataFrame({'true': gt, 'pred': pred, 'conf': conf})
+    df['correct'] = (df.pred == df.true).astype(int)
+
+    # digitize into bins
+    bin_bounds = np.linspace(0, 1, conf_bin_num + 1)[1:-1]
+    df['conf_bin'] = df['conf'].apply(lambda x: np.digitize(x, bin_bounds))
+
+    # compute per-bin accuracy, confidence, counts
+    group_acc   = df.groupby('conf_bin')['correct'].mean()
+    group_conf  = df.groupby('conf_bin')['conf'].mean()
+    counts      = df.groupby('conf_bin')['conf'].count()
+
+    # maximal weighted deviation
+    mce = (abs(group_acc - group_conf) * (counts / len(df))).max()
+    return mce
+
+
+def AdaptiveECE(conf, pred, gt, conf_bin_num=10):
+    """
+    Adaptive (quantile) Expected Calibration Error
+    """
+    df = pd.DataFrame({'true': gt, 'pred': pred, 'conf': conf})
+    df['correct'] = (df.pred == df.true).astype(int)
+
+    # quantile-based binning
+    df['conf_bin'] = KBinsDiscretizer(
+        n_bins=conf_bin_num,
+        encode='ordinal',
+        strategy='quantile'
+    ).fit_transform(conf[:, None]).astype(int)
+
+    group_acc  = df.groupby('conf_bin')['correct'].mean()
+    group_conf = df.groupby('conf_bin')['conf'].mean()
+    counts     = df.groupby('conf_bin')['conf'].count()
+
+    ace = (abs(group_acc - group_conf) * (counts / len(df))).sum()
+    return ace
+
+
+def PIECE(conf, knndist, pred, gt,
+          dist_bin_num=10, conf_bin_num=10,
+          knn_strategy='quantile'):
+    """
+    Proximity-Informed Expected Calibration Error
+    """
+    df = pd.DataFrame({
+        'true':    gt,
+        'pred':    pred,
+        'conf':    conf,
+        'knndist': knndist
+    })
+    df['correct'] = (df.pred == df.true).astype(int)
+
+    # bin by knn distance
+    df['knn_bin'] = KBinsDiscretizer(
+        n_bins=dist_bin_num,
+        encode='ordinal',
+        strategy=knn_strategy
+    ).fit_transform(df[['knndist']]).astype(int)
+
+    # uniform bins for confidence
+    bin_bounds = np.linspace(0, 1, conf_bin_num + 1)[1:-1]
+    df['conf_bin'] = df['conf'].apply(lambda x: np.digitize(x, bin_bounds))
+
+    # compute per-(knn,conf) stats
+    grp_acc   = df.groupby(['knn_bin', 'conf_bin'])['correct'].mean()
+    grp_conf  = df.groupby(['knn_bin', 'conf_bin'])['conf'].mean()
+    counts    = df.groupby(['knn_bin', 'conf_bin'])['conf'].count()
+
+    piece = (abs(grp_acc - grp_conf) * (counts / len(df))).sum()
+    return piece
+class EvaluatorBase:
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+    def reset(self):
+        raise NotImplementedError
+
+    def process(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def evaluate(self):
+        raise NotImplementedError
+@EVALUATOR_REGISTRY.register()
+class Classification(EvaluatorBase):
+    def __init__(self, cfg, lab2cname=None, **kwargs):
+        super().__init__(cfg)
+        self._lab2cname     = lab2cname
+        self._correct       = 0
+        self._total         = 0
+        self._y_true        = []
+        self._y_pred        = []
+        self._confidences   = []
+        self._knn_dists     = []  # for PIECE
+
+        if cfg.TEST.PER_CLASS_RESULT:
+            assert lab2cname is not None, "lab2cname is required for per-class results"
+            self._per_class_res = defaultdict(list)
+        else:
+            self._per_class_res = None
+
+    def reset(self):
+        self._correct       = 0
+        self._total         = 0
+        self._y_true        = []
+        self._y_pred        = []
+        self._confidences   = []
+        self._knn_dists     = []
+        if self._per_class_res is not None:
+            self._per_class_res = defaultdict(list)
+
+    def process(self, model_output, ground_truth, knn_dist=None):
+        # predictions and confidences
+        preds      = model_output.argmax(dim=1)
+        confs      = model_output.softmax(dim=1).max(dim=1)[0]
+        matches    = preds.eq(ground_truth).float()
+
+        # update overall counters
+        self._correct += int(matches.sum().item())
+        self._total   += ground_truth.size(0)
+
+        # store for final metrics
+        self._y_true      .extend(ground_truth.cpu().tolist())
+        self._y_pred      .extend(preds.cpu().tolist())
+        self._confidences .extend(confs.cpu().tolist())
+        if knn_dist is not None:
+            # assume knn_dist is a numpy array aligned with batch
+            self._knn_dists.extend(knn_dist.tolist())
+
+        if self._per_class_res is not None:
+            for i, label in enumerate(ground_truth):
+                self._per_class_res[label.item()].append(int(matches[i].item()))
+
+    def evaluate(self):
+        results = OrderedDict()
+
+        # convert to numpy arrays
+        y_true = np.array(self._y_true)
+        y_pred = np.array(self._y_pred)
+        confs  = np.array(self._confidences)
+
+        # overall accuracy & error
+        acc = 100.0 * self._correct / self._total
+        err = 100.0 - acc
+
+        # macro-F1
+        macro_f1 = 100.0 * f1_score(
+            y_true, y_pred,
+            average="macro",
+            labels=np.unique(y_true)
+        )
+
+        # calibration metrics
+        ece_value       = ECE_Loss(
+            num_bins=10,
+            predictions=y_pred,
+            confidences=confs,
+            correct=(y_pred == y_true).astype(int)
+        ) * 100.0
+
+        mce_value       = MCE(confs, y_pred, y_true) * 100.0
+        adaptive_ece    = AdaptiveECE(confs, y_pred, y_true) * 100.0
+
+        # PIECE only if we have knn distances
+        if len(self._knn_dists) == len(confs):
+            knn_arr    = np.array(self._knn_dists)
+            piece_value = PIECE(confs, knn_arr, y_pred, y_true) * 100.0
+        else:
+            piece_value = None
+
+        # build result dict
+        results["accuracy"]       = acc
+        results["error_rate"]     = err
+        results["macro_f1"]       = macro_f1
+        results["ece"]            = ece_value
+        results["mce"]            = mce_value
+        results["adaptive_ece"]   = adaptive_ece
+        if piece_value is not None:
+            results["piece"]      = piece_value
+
+        # print summary
+        print(f"=> Total samples: {self._total:,}")
+        print(f"=> Accuracy: {acc:.2f}%  Error rate: {err:.2f}%")
+        print(f"=> Macro-F1: {macro_f1:.2f}%")
+        print(f"=> ECE: {ece_value:.2f}%  MCE: {mce_value:.2f}%  Adaptive ECE: {adaptive_ece:.2f}%")
+        if piece_value is not None:
+            print(f"=> PIECE: {piece_value:.2f}%")
+
+        # per-class results
+        if self._per_class_res is not None:
+            accs = []
+            print("=> Per-class accuracies:")
+            for lbl in sorted(self._per_class_res.keys()):
+                corrects = self._per_class_res[lbl]
+                cls_acc  = 100.0 * sum(corrects) / len(corrects)
+                cname    = self._lab2cname[lbl]
+                accs.append(cls_acc)
+                print(f"* Class {lbl} ({cname}): {cls_acc:.2f}% [{len(corrects)} samples]")
+            mean_pc = float(np.mean(accs))
+            results["perclass_accuracy"] = mean_pc
+            print(f"=> Average per-class accuracy: {mean_pc:.2f}%")
+
+        # optionally save confusion matrix
+        if self.cfg.TEST.COMPUTE_CMAT:
+            cmat = confusion_matrix(y_true, y_pred, normalize="true")
+            save_path = osp.join(self.cfg.OUTPUT_DIR, "cmat.pt")
+            torch.save(cmat, save_path)
+            print(f"Confusion matrix saved to {save_path}")
+        return results
+
+```
+---
 ## 🔧 Run Experiments
 🔥 TCPT Experiment
 Move to the respective method's scripts folder and run the command below (Example is done for MaPLe):
