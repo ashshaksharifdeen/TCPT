@@ -260,7 +260,9 @@ If you find our work useful for your research, please consider citing:
       primaryClass={cs.CV},
       url={https://arxiv.org/abs/2602.19024}, 
 }
-
+```
+## 📧 Contact
+If you need any further clarification, please feel free to contact me at [ashshaks@gmail.com](mailto:ashshaks@gmail.com).
 
 
 
