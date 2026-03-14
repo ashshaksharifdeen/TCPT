@@ -29,15 +29,6 @@ Our contributions are summarized as follows:
 - We show that our method consistently improves calibration performance across multiple prompt-tuning baselines and 11 fine-grained classification benchmarks.
 - We provide extensive empirical analysis demonstrating improved ECE with competitive or better accuracy across both base and novel splits.
 
----
-
-## 📈 Main Figures
-
-> **Note:** Save your attached figure PDFs as image files before using them in GitHub README rendering.  
-> Recommended filenames:
-> - `assets/main_figure.png`  ← exported from your main figure PDF
-> - `assets/motivation_figure.png` ← exported from your motivation PDF
-
 <p align="center">
   <img src="Main_figure_cvpr.png" width="95%" alt="Main comparison figure"/>
 </p>
