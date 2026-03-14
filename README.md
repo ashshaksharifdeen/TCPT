@@ -1,5 +1,3 @@
-# Towards Calibrating Prompt Tuning of Vision- Language Models [CVPR 2026]
-
 # 🚀 Towards Calibrating Prompt Tuning of Vision-Language Models (CVPR 2026)
 
 Code and resources for our CVPR 2026 paper on calibrating prompt tuning in vision-language models.
