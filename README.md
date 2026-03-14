@@ -74,7 +74,15 @@ We evaluate on 11 fine-grained classification benchmarks commonly used in prompt
 11. UCF101
 
 ---
+## 🔧 Run Experiments
+🔥 TCPT Experiment
+Move to the respective method's scripts folder and run the command below (Example is done for MaPLe):
+```bash
+#Fine-grained classification
+bash base2new_train_maple_datasets.sh && bash base2new_test_maple.sh && bash parse_all_results.sh
 
+```
+---
 ## 📊 Main Results
 
 We report **Top-1 Accuracy (Acc.)** and **Expected Calibration Error (ECE)** on both **base** and **novel** classes. Higher accuracy is better, while lower ECE indicates better calibration.
